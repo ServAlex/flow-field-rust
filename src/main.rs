@@ -1,80 +1,10 @@
-use std::{
-    array::{self, from_fn},
-    f64,
-};
+mod particle;
+mod real_vector;
 
+use particle::Particle;
 use raylib::prelude::*;
-
-struct RealVector {
-    x: f64,
-    y: f64,
-}
-
-impl RealVector {
-    fn add(&self, second: &RealVector) -> RealVector {
-        RealVector {
-            x: self.x + second.x,
-            y: self.y + second.y,
-        }
-    }
-
-    fn subtract(&self, second: &RealVector) -> RealVector {
-        RealVector {
-            x: self.x - second.x,
-            y: self.y - second.y,
-        }
-    }
-
-    fn multiply(&self, factor: f64) -> RealVector {
-        RealVector {
-            x: self.x * factor,
-            y: self.y * factor,
-        }
-    }
-
-    fn limit(&self, min: f64, max: f64) -> RealVector {
-        let magnitude = self.get_magnitude();
-
-        if magnitude < 0.0001 {
-            return RealVector {
-                x: self.x,
-                y: self.y,
-            };
-        }
-
-        if magnitude > max {
-            self.multiply(max / magnitude)
-        } else if magnitude < min {
-            self.multiply(min / magnitude)
-        } else {
-            RealVector {
-                x: self.x,
-                y: self.y,
-            }
-        }
-    }
-
-    fn bring_to_limits_looping(value: f64, min: f64, max: f64) -> f64 {
-        let length = max - min;
-        let loops = ((value - min) / length).floor();
-        value - loops * length
-    }
-
-    fn bring_to_box(&mut self, width: i32, height: i32) -> RealVector {
-        RealVector {
-            x: RealVector::bring_to_limits_looping(self.x, 0.0, width as f64),
-            y: RealVector::bring_to_limits_looping(self.y, 0.0, height as f64),
-        }
-    }
-
-    fn get_magnitude(&self) -> f64 {
-        f64::sqrt(self.x.powi(2) + self.y.powi(2))
-    }
-
-    fn get_angle(&self) -> f64 {
-        f64::atan2(self.y, self.x)
-    }
-}
+use real_vector::RealVector;
+use std::{array, f64};
 
 struct Slot {
     vector: RealVector,
@@ -98,7 +28,7 @@ fn field_function(x: f64, y: f64) -> f64 {
         x: y.cos(),
         y: x.sin(),
     }
-        .get_angle()
+    .get_angle()
 }
 
 const MULTIPLIER: f64 = 0.6;
@@ -112,36 +42,6 @@ const PARTICLE_COUNT: usize = 5000;
 const PARTICLE_MIN_SPEED: f64 = 0.3;
 //const PARTICLE_MAX_SPEED: f64 = 1.0;
 const PARTICLE_MAX_SPEED: f64 = 2.0;
-
-struct Particle {
-    position: RealVector,
-    velocity: RealVector,
-    min_speed: f64,
-    max_speed: f64,
-}
-
-impl Particle {
-    fn new(position: RealVector, velocity: RealVector, min_speed: f64, max_speed: f64) -> Particle {
-        Particle {
-            position,
-            velocity,
-            min_speed,
-            max_speed,
-        }
-    }
-
-    fn apply_force(&mut self, force: &RealVector) {
-        self.velocity = self
-            .velocity
-            .add(force)
-            .limit(self.min_speed, self.max_speed);
-    }
-
-    fn update(&mut self) {
-        self.position = self.position.add(&self.velocity);
-        self.position = self.position.bring_to_box(WIDTH, HEIGHT);
-    }
-}
 
 fn get_column(i: usize) -> [Slot; ROWS] {
     array::from_fn(|j| Slot {
@@ -161,7 +61,7 @@ fn main() {
                 x: i as f64 * 10.0,
                 y: i as f64 * 10.0,
             }
-                .bring_to_box(WIDTH, HEIGHT),
+            .bring_to_box(WIDTH, HEIGHT),
             RealVector {
                 x: 0.0,
                 y: PARTICLE_MIN_SPEED,
@@ -233,7 +133,7 @@ fn main() {
                     .vector
                     .limit(FORCE_LIMIT_MIN, FORCE_LIMIT_MAX),
             );
-            particle.update();
+            particle.update(WIDTH, HEIGHT);
 
             drawing_context.draw_circle(
                 particle.position.x as i32,
